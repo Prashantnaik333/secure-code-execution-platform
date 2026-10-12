@@ -1,0 +1,312 @@
+Software Test Plan (STP)
+Secure Online Code Execution Platform
+Team 14 | Version 1.0 | Date: 10 October 2026 | Status: Draft for Team Review
+Problem statement: Allow users to write and execute programs in an isolated environment. Enforce time/resource limits, capture output and errors, and protect the server from unsafe code.
+Team Members
+Name
+SRN
+Prathyush Gowda
+PES1UG24AM201
+Pradyum Bidadi
+PES1UG24AM194
+Prashant Devendra Naik
+PES1UG24AM199
+Pradyun P Urs
+PES1UG24AM195
+Revision History
+Version
+Date
+Author
+Change Summary
+1.0
+10-10-2026
+Team 14
+Initial project-specific draft
+Approvals
+Course instructor / evaluator: ____________________    Date: __________
+Team representative: ____________________________    Date: __________
+1. Introduction
+1.1 Purpose
+This plan defines the test scope, strategy, environment, test cases, responsibilities, schedule, risks, and acceptance criteria for Team 14's Secure Online Code Execution Platform.
+1.2 Scope
+Testing covers input validation, job submission and status, isolated execution, output/error capture, time/resource limits, authorization where implemented, cleanup, health checks, logging safety, and CI workflow. Use controlled test programs in a non-production environment.
+1.3 References
+Team14_Secure_Code_Execution_SRS.docx
+Team14_Secure_Code_Execution_SAD.docx
+Team repository README and CI configuration
+1.4 Definitions
+TC: test case; CI: continuous integration; PR: pull request; stdout/stderr: standard output/error; SUT: system under test.
+2. Test Items
+Web UI/code editor and language selector
+API controller and request validator
+Job manager and job-state transitions
+Execution worker and sandbox configuration
+Output/error capture and result retrieval
+Resource-limit enforcement and cleanup
+Health endpoint and safe event logging
+GitHub Actions CI and pull-request checks
+3. Features to be Tested
+Feature
+SRS mapping
+Test types
+Valid and invalid submission
+SCEP-F-001..003, F-012
+Unit, API, negative
+Compile/run and capture result
+SCEP-F-003, F-007..008
+Unit, integration, system
+Timeout, CPU/memory, output limits
+SCEP-F-005..006, F-009; SCEP-SR-002
+Integration, resource/safety
+Sandbox isolation and network/filesystem restrictions
+SCEP-F-004, F-013..015; SCEP-SR-001/004/005
+Security, integration
+Job states, errors, authorized result retrieval
+SCEP-F-010..011, F-018; SCEP-SR-003
+API, negative, regression
+Health and safe logging
+SCEP-F-016..017; SCEP-SR-006
+Operational, security
+CI workflow
+SCEP-NF-005
+Repository/automation
+4. Features Not to be Tested
+Security certification or proof of immunity to all possible sandbox escapes.
+Production-scale load testing without a production-like environment.
+Compiler/runtime correctness beyond supported examples and error handling.
+External identity providers, cloud infrastructure, or third-party integrations not implemented.
+5. Test Approach / Strategy
+5.1 Levels
+Unit tests: input validation, state transitions, error formatting, output-size handling.
+Integration tests: API to job manager, worker invocation, result persistence, and cleanup.
+System tests: end-to-end submission, execution, and result display.
+Security tests: controlled attempts to exceed limits, read prohibited files, access another job, or use blocked network access.
+CI tests: verify tests run automatically on pull requests and main updates.
+5.2 Entry and Exit Criteria
+Entry: runnable build available; isolated test environment ready; supported languages and limits documented; test programs ready.
+Exit: all planned critical/high-priority tests executed; critical security tests pass; no open critical defects; RTM updated; CI passes.
+5.3 Security Validation
+Verify code is not executed in the privileged API process.
+Verify timeout/resource exhaustion is contained.
+Verify sandbox cannot access protected host test files or secrets.
+Verify network access is blocked by default where configured.
+Verify users cannot retrieve jobs they do not own, if ownership/authentication is implemented.
+Verify logs and errors do not disclose secrets or stack traces.
+6. Test Environment
+Item
+Environment / notes
+Host
+Dedicated development/test machine or isolated VM; never run adversarial tests on production.
+OS / runtime
+Linux-capable environment and exact compiler/runtime versions documented by the project.
+Sandbox
+Chosen container/OS isolation mechanism with restrictive permissions and configured limits.
+Tools
+Unit-test framework, API client, GitHub Actions, and log inspection tools.
+Test programs
+Hello-world, compile-error, stderr, infinite-loop, memory-use, output-flood, filesystem/network probes in a controlled sandbox.
+Test data
+Synthetic source code and dummy job IDs; no real secrets or personal data.
+7. Test Schedule
+Milestone
+Target
+Owner
+Confirm requirements, languages, and limits
+10 Oct 2026
+All team
+Complete SRS, SAD, STP and diagrams
+By 11 Oct 2026
+All team
+Add tests for implemented features
+Each feature branch
+Feature owner + reviewer
+Run local tests and CI; fix defects
+Before each PR merge
+Feature owner
+Review documents, RTM, and demo evidence
+11 Oct 2026
+All team
+8. Test Deliverables
+SRS, SAD, and STP documents
+Automated tests and documented manual cases
+CI run evidence and pull-request review history
+Test execution results, defect list, and final RTM
+Screenshots/logs demonstrating normal execution and limit enforcement
+9. Roles and Responsibilities
+Role
+Suggested owner
+Responsibility
+Coordinator / integration
+Prathyush Gowda
+Coordinate document completion, integrate reviewed changes, confirm deadline.
+API / validation
+Pradyum Bidadi
+Implement/test request validation and API behavior; document endpoint contract.
+Sandbox / limits
+Prashant Devendra Naik
+Implement/test isolation, time/resource limits, cleanup, and safety cases.
+UI / results / CI support
+Pradyun P Urs
+Implement/test result presentation, error display, health checks, and CI support.
+All members
+All four
+Review a teammate's PR, run local tests, update documentation, contribute meaningfully.
+These are suggested work allocations, not a claim that tasks have already been assigned. Confirm them as a team.
+10. Risks and Mitigation
+Risk
+Mitigation
+Sandbox differs across hosts
+Document environment and test exact deployment configuration.
+Resource-limit test hangs
+Use conservative limits, an outer test timeout, and a disposable VM/container.
+Feature merges break another module
+Require CI, one approval, and regression tests for every PR.
+Deadline is close
+Work in parallel on independent sections and merge small reviewed PRs early.
+Missing numeric limits or language scope
+Record explicit values and versions before acceptance.
+Tests are nondeterministic
+Use bounded programs and a repeatable environment setup.
+11. Assumptions and Dependencies
+The team repository is accessible to all four members.
+The chosen execution environment supports intended isolation/resource controls.
+Compiler/runtime packages are available in the test environment.
+CI is enabled for the team repository.
+The team agrees on the stack and numerical limits.
+12. Suspension and Resumption Criteria
+Suspend security/resource tests if the environment becomes unstable, host impact is suspected, or a test process cannot be reliably terminated. Resume after the environment is restored, leftover processes are cleaned up, and the test owner confirms safe conditions.
+13. Test Cases and Traceability
+Test ID
+Requirement
+Scenario
+Input / setup
+Expected result
+TC-F-01
+SCEP-F-001
+Submit valid small program
+Valid supported language and simple program
+Job accepted; job ID returned
+TC-F-02
+SCEP-F-002, F-012
+Submit invalid fields
+Empty code, unsupported language, malformed request
+Controlled 4xx; no execution
+TC-F-03
+SCEP-F-003
+Compilation error
+Intentionally invalid syntax
+Diagnostics captured; program not run
+TC-F-04
+SCEP-F-007
+Separate stdout/stderr
+Program writes known text to both streams
+Streams captured separately
+TC-F-05
+SCEP-F-008
+Exit code and duration
+Normal and non-zero exit programs
+Exit status and duration reported where available
+TC-F-06
+SCEP-F-010
+Job state lifecycle
+Submit short-running job
+States progress consistently
+TC-F-07
+SCEP-F-018
+Structured errors
+Trigger validation, compile, timeout, and internal test failures
+Correct category; no stack trace exposed
+TC-LIM-01
+SCEP-F-005, SCEP-SR-002
+Wall-clock timeout
+Controlled infinite-loop program
+Terminated within configured timeout and cleanup margin
+TC-LIM-02
+SCEP-F-006, SCEP-SR-002
+Memory/CPU limit
+Controlled resource-intensive test
+Job contained; service remains responsive
+TC-LIM-03
+SCEP-F-009, SCEP-SR-002
+Output flood
+Program exceeds output cap
+Output bounded or process terminated per policy
+TC-SEC-01
+SCEP-F-004, SCEP-SR-001
+Sandbox boundary
+Safe privilege/environment inspection probes
+No privileged execution or host secrets exposed
+TC-SEC-02
+SCEP-F-011, SCEP-SR-003
+Cross-job access
+Request another owner's job using a different identity
+Access denied; no result leakage
+TC-SEC-03
+SCEP-F-012
+Oversized input
+Source/stdin over configured maximum
+Rejected before worker invocation
+TC-SEC-04
+SCEP-F-013, SCEP-SR-004
+Filesystem isolation
+Read designated protected host test file
+Access denied; no protected content returned
+TC-SEC-05
+SCEP-F-014, SCEP-SR-005
+Network restriction
+Attempt outbound connection from sandbox
+Blocked by default policy
+TC-SEC-06
+SCEP-F-015
+Cleanup
+Run success, error, and timeout cases
+No lingering child process or job workspace
+TC-SEC-07
+SCEP-NF-006, SCEP-SR-006
+Safe errors/logs
+Trigger controlled failure and inspect output/logs
+No secrets or stack traces
+TC-OPS-01
+SCEP-F-016
+Operational logging
+Submit success and failure jobs
+Safe lifecycle events recorded
+TC-OPS-02
+SCEP-F-017, SCEP-NF-007
+Worker unavailable
+Stop test worker in non-production environment
+Health not-ready; controlled API error
+TC-NF-01
+SCEP-NF-001
+Submission latency
+Repeated small-program submissions under defined test load
+95th percentile acknowledgement meets documented target
+TC-UX-01
+SCEP-NF-004
+Error/result clarity
+Review success, compile error, timeout, truncated output
+Messages/status are distinguishable
+TC-CI-01
+SCEP-NF-005
+CI on pull request
+Push feature branch and open PR
+Tests run; failed required checks block merge
+14. Test Metrics and Reporting
+Planned/executed/passed/failed/blocked test counts.
+Requirement coverage: requirements with at least one mapped test / total testable requirements.
+Open defects by severity and age.
+CI status and PR review status.
+Security and resource-limit test outcomes.
+15. Approvals
+Role
+Name
+Signature / date
+Team representative
+Prathyush Gowda
+________________________
+Developer representative
+Prashant Devendra Naik
+________________________
+Instructor / evaluator
+________________________
+________________________
