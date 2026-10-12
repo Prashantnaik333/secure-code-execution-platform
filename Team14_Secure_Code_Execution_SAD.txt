@@ -1,0 +1,200 @@
+Software Architecture and Design (SAD)
+Secure Online Code Execution Platform
+Team 14 | Version 1.0 | Date: 10 October 2026 | Status: Draft for Team Review
+Problem statement: Allow users to write and execute programs in an isolated environment. Enforce time/resource limits, capture output and errors, and protect the server from unsafe code.
+Team Members
+Name
+SRN
+Prathyush Gowda
+PES1UG24AM201
+Pradyum Bidadi
+PES1UG24AM194
+Prashant Devendra Naik
+PES1UG24AM199
+Pradyun P Urs
+PES1UG24AM195
+Revision History
+Version
+Date
+Author
+Change Summary
+1.0
+10-10-2026
+Team 14
+Initial project-specific draft
+Approvals
+Course instructor / evaluator: ____________________    Date: __________
+Team representative: ____________________________    Date: __________
+1. Introduction
+1.1 Purpose
+This document describes the architecture, components, security boundaries, interfaces, and design decisions for the Secure Online Code Execution Platform.
+1.2 Scope
+Covers code submission, validation, job management, isolated compilation/execution, output capture, limit enforcement, result retrieval, logging, and CI workflow.
+1.3 Audience
+Developers, testers, maintainers, and project evaluators.
+1.4 Definitions
+API, sandbox, worker, job queue, stdout, stderr, CPU quota, memory limit, wall-clock timeout, CI, PR.
+2. Document Overview
+Related documents: Team14_Secure_Code_Execution_SRS.docx and Team14_Secure_Code_Execution_STP.docx.
+3. Architecture
+3.1 Goals and Constraints
+Run user-submitted code without trusting it.
+Apply independent limits for time, memory, CPU, and output.
+Keep UI/API separate from untrusted execution.
+Provide clear results and safe failure behavior.
+Support testable modules and reviewed changes through branch/PR/CI workflow.
+3.2 Stakeholders and Concerns
+Stakeholder
+Primary concern
+User
+Correct output, clear errors, responsive interface
+Developer
+Modular code, clear interfaces, reproducible tests
+Tester
+Traceable requirements and repeatable test environment
+Maintainer
+Health monitoring, safe configuration, diagnosable failures
+Evaluator
+Evidence of isolation, resource limits, tests, and team workflow
+3.3 Component Diagram
+Render the following PlantUML source to obtain the UML component diagram:
+@startumlskinparam componentStyle rectangleactor Usercomponent "Web UI / Code Editor" as UIcomponent "API Controller" as APIcomponent "Input Validator" as VALcomponent "Job Manager" as JMcomponent "Result Store" as DBcomponent "Execution Worker" as WORKERcomponent "Sandbox / Runtime" as BOXcomponent "Safe Event Logger" as LOGUser --> UIUI --> API : HTTPS/JSONAPI --> VALAPI --> JMJM --> DB : job metadataJM --> WORKER : validated jobWORKER --> BOX : compile/run restricted processBOX --> WORKER : stdout/stderr/exit statusWORKER --> DB : bounded resultAPI --> DB : authorized result lookupAPI --> LOGJM --> LOGWORKER --> LOGnote right of BOXUntrusted code boundary:least privilege, temporary workspace,resource quotas, network denied by defaultend note@enduml
+3.4 Component Descriptions
+Component
+Responsibility
+Security/design notes
+Web UI / Code Editor
+Collect code, language, stdin; display status and result.
+Treat output as text; do not render program output as trusted HTML.
+API Controller
+Expose execute, job-result, and health endpoints.
+Validate request shape and return structured errors.
+Input Validator
+Check language allowlist and payload sizes.
+Reject invalid input before scheduling work.
+Job Manager
+Create job IDs, manage lifecycle, dispatch and track jobs.
+Prevent inconsistent state changes; enforce queue policy.
+Execution Worker
+Prepare a job, invoke sandbox, collect bounded results, clean up.
+Never evaluate submitted code in the privileged API process.
+Sandbox / Runtime
+Compile/run code under strict OS/container restrictions.
+Least privilege, per-job workspace, resource quotas, no host secrets, network denied by default.
+Result Store
+Persist job status and bounded result metadata if implemented.
+Apply ownership checks and retention limits.
+Safe Event Logger
+Record operational lifecycle and errors.
+Never log secrets; avoid unnecessary full source/output logging.
+3.5 Chosen Architecture Pattern and Rationale
+Use a layered architecture with a separate execution-worker boundary. Presentation, API/validation, job orchestration, execution, and persistence are separated for testability and security. Submitted code must not run inside the privileged web process. A microservices deployment is not required for the initial academic scope, but the worker isolation boundary remains mandatory.
+3.6 Technology Stack and Data Stores
+Proposed stack: browser UI; backend API in the team's selected language/framework; Linux execution worker; container/OS sandbox with resource controls; optional database for job metadata; automated tests and GitHub Actions CI. Update this section to match the actual implementation.
+3.7 Risks and Mitigations
+Risk
+Impact
+Mitigation
+Sandbox escape or excessive privilege
+Host compromise
+Least privilege, restrictive sandbox, no privileged containers, security tests.
+Infinite loop / memory exhaustion
+Worker or server disruption
+CPU, memory, process, output, and wall-clock limits.
+Output flooding
+Memory/storage exhaustion
+Bounded capture and truncation/termination policy.
+Cross-user result access
+Privacy breach
+Authorization on every job lookup; negative tests.
+Worker unavailable
+Jobs fail or hang
+Readiness checks, timeout, controlled errors, cleanup.
+Configuration drift
+Inconsistent limits
+Central configuration, documented defaults, CI tests.
+3.8 Traceability to Requirements
+Requirement group
+Architecture component
+Design evidence
+SCEP-F-001..003
+API Controller / Input Validator
+Request schema and validation tests
+SCEP-F-004, SCEP-SR-001/004/005
+Execution Worker / Sandbox
+Sandbox configuration and security tests
+SCEP-F-005..009, SCEP-SR-002
+Sandbox / Result capture
+Limit tests and bounded output tests
+SCEP-F-010, F-018
+Job Manager / API
+State model and structured error tests
+SCEP-F-011, SCEP-SR-003
+API / Result Store
+Authorization tests
+SCEP-F-016..017
+Logger / Health endpoint
+Operational tests
+SCEP-NF-005
+GitHub CI
+Pull-request workflow and CI evidence
+3.9 Security Architecture
+Treat source code, stdin, generated files, and program output as untrusted.
+Validate inputs and enforce language allowlists.
+Run each job with least privilege, bounded resources, isolated temporary storage, and no unnecessary network access.
+Never mount host credentials, Docker socket, home directories, or sensitive application files into the sandbox.
+Apply authorization checks to result retrieval.
+Avoid exposing stack traces, secrets, environment variables, or internal paths.
+Clean up child processes and temporary files on success, error, timeout, and cancellation.
+4. Design
+4.1 Design Overview
+Normal flow: user submits code → API validates request → job manager creates job → worker starts isolated sandbox → compiler/runtime executes under limits → worker captures bounded results and cleans up → API returns status and result to authorized user.
+4.2 Sequence Diagrams
+Sequence 1 — successful execution:
+@startumlactor Userparticipant "Web UI" as UIparticipant APIparticipant Validatorparticipant "Job Manager" as JMparticipant "Sandbox Worker" as Wdatabase "Result Store" as DBUser -> UI : Enter code and select languageUI -> API : POST /api/executeAPI -> Validator : Validate payload and limitsValidator --> API : ValidAPI -> JM : Create jobJM -> DB : Store job statusJM -> W : Execute isolated jobW -> W : Compile/run with limitsW -> DB : Store bounded resultAPI --> UI : jobId/statusUI -> API : GET /api/jobs/{jobId}API -> DB : Authorize and fetch resultDB --> API : ResultAPI --> UI : Status/output/errors@enduml
+Sequence 2 — timeout or resource-limit failure:
+@startumlactor Userparticipant APIparticipant "Job Manager" as JMparticipant "Sandbox Worker" as Wparticipant "Limit Enforcer" as LEdatabase "Result Store" as DBUser -> API : Submit programAPI -> JM : Validated jobJM -> W : Start isolated executionW -> LE : Run under configured quotasLE -> LE : Wall-clock / CPU / memory exceededLE -> W : Terminate processW -> W : Kill children and clean workspaceW -> DB : Store timeout/resource-limit statusAPI --> User : Controlled status and safe message@enduml
+4.3 API Design
+Interface
+Request
+Success response
+Errors
+POST /api/execute
+{code, language, stdin?}
+{jobId, status}
+400 invalid input; 413 too large; 500 generic error
+GET /api/jobs/{jobId}
+Job identifier
+{jobId, status, stdout, stderr, exitCode, durationMs}
+404 unknown/unauthorized job; 503 dependency unavailable
+GET /api/health
+None
+{status}
+503 if required component unavailable
+Keep JSON schemas, authentication, and HTTP status policy consistent with the implementation and automated tests.
+4.4 Error Handling, Logging and Monitoring
+Use structured categories: validation, unsupported language, compile failure, runtime failure, timeout, resource limit, unauthorized access, and internal failure.
+Return safe messages to users; keep detailed diagnostics in restricted logs.
+Record timestamps, job ID, lifecycle status, duration, and failure category without secrets.
+Expose readiness for the API and execution worker.
+Ensure cleanup runs even when execution fails.
+4.5 UX Design
+Keep Run and language selection visible; show a running state while a job executes.
+Distinguish compilation errors from runtime errors and timeouts.
+Display stdout and stderr separately and indicate truncated output.
+Do not report success if the worker failed or a timeout occurred.
+4.6 Open Issues and Next Steps
+Confirm languages and runtime versions.
+Select and verify sandbox mechanism.
+Set numeric limits and output-retention policy.
+Decide whether authentication and persistent history are in scope.
+Render final UML diagrams and attach diagram screenshots.
+5. Appendices
+5.1 Glossary
+Sandbox: restricted execution environment. Worker: component that supervises code execution. Job: one execution request. CI: automated build/test process. PR: pull request. RTM: requirements traceability matrix.
+5.2 References
+Team 14 SRS and STP documents.
+OWASP secure-design and input-validation guidance.
+Documentation for the selected runtime, container, and operating-system resource controls.
+5.3 Tools
+Suggested tools: PlantUML or diagrams.net, GitHub Actions, language-specific unit-test framework, and an API client. Record actual tools used.
