@@ -1,0 +1,27 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Sandbox runtime temporary folders
+.sandbox_runtime/*
+!.sandbox_runtime/.gitkeep
+
+# Logs
+logs/*.log
+
+# Pytest & Test caches
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environments
+venv/
+.venv/
+env/
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

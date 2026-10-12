@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secure Online Code Execution Platform | Team 14</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header Bar -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <div class="logo-shield">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="M9 12l2 2 4-4"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>SecureExec <span>Sandbox</span></h1>
+        <span class="sub-badge">Team 14 • PES University</span>
+      </div>
+    </div>
+
+    <div class="nav-center">
+      <div class="lang-selector-group">
+        <label for="languageSelect">Language:</label>
+        <select id="languageSelect" class="select-dropdown">
+          <option value="python">Python 3.11</option>
+          <option value="javascript">JavaScript (Node.js)</option>
+          <option value="c">C (GCC 15.2)</option>
+          <option value="cpp">C++ (G++ 15.2)</option>
+          <option value="java">Java 26</option>
+        </select>
+      </div>
+
+      <div class="presets-group">
+        <label for="presetSelect">Test Presets:</label>
+        <select id="presetSelect" class="select-dropdown preset-dropdown">
+          <option value="hello">1. Standard Hello World</option>
+          <option value="stdin">2. Read Input from Stdin</option>
+          <option value="fib">3. Fibonacci / Computation</option>
+          <option value="timeout">4. [TC-LIM-01] Infinite Loop (Timeout)</option>
+          <option value="output_flood">5. [TC-LIM-03] Output Flood (64KB Cap)</option>
+          <option value="compile_err">6. [TC-F-03] Syntax Compilation Error</option>
+          <option value="secret_probe">7. [TC-SEC-01] Secret & Env Snooper Probe</option>
+          <option value="fs_probe">8. [TC-SEC-04] Host Filesystem Escape Probe</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <button id="btnHealth" class="btn btn-secondary" title="View System Health & Worker Status">
+        <span class="pulse-indicator online"></span> System Status
+      </button>
+      <button id="btnHistory" class="btn btn-secondary" title="View Submission History">History</button>
+      <button id="btnRun" class="btn btn-primary" title="Execute program in sandbox (Ctrl+Enter)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+        <span>Run Code</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="workspace-container">
+    <!-- Left Panel: Code Editor -->
+    <section class="panel editor-panel">
+      <div class="panel-header">
+        <div class="file-tab">
+          <span class="tab-icon">📄</span>
+          <span id="fileNameLabel">main.py</span>
+          <span class="tab-status-dot"></span>
+        </div>
+        <div class="editor-tools">
+          <button id="btnResetCode" class="tool-btn" title="Reset to template">Reset</button>
+          <button id="btnClearCode" class="tool-btn" title="Clear editor">Clear</button>
+          <button id="btnToggleStdin" class="tool-btn highlight" title="Toggle Standard Input">
+            <span id="stdinBadge">Stdin (Empty)</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="editor-wrapper">
+        <div class="line-numbers" id="lineNumbers">1</div>
+        <textarea id="codeEditor" spellcheck="false" placeholder="Write or paste your code here..."></textarea>
+      </div>
+
+      <!-- Collapsible Stdin Drawer -->
+      <div id="stdinDrawer" class="stdin-drawer collapsed">
+        <div class="stdin-header">
+          <span>Standard Input (stdin)</span>
+          <button id="btnCloseStdin" class="close-btn">&times;</button>
+        </div>
+        <textarea id="stdinInput" placeholder="Enter input passed to program via standard input..."></textarea>
+      </div>
+
+      <div class="editor-footer">
+        <div class="meta-item">
+          <span>Max Size:</span> <strong>64 KB</strong>
+        </div>
+        <div class="meta-item">
+          <span>Timeout Limit:</span> <strong>4.0s</strong>
+        </div>
+        <div class="meta-item shortcut-hint">
+          <span>Shortcut:</span> <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to run
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Panel: Execution Output & Security Monitor -->
+    <section class="panel output-panel">
+      <div class="panel-header">
+        <div class="output-tabs">
+          <button class="output-tab active" data-tab="stdout">Standard Output</button>
+          <button class="output-tab" data-tab="stderr">Standard Error</button>
+          <button class="output-tab" data-tab="compiler" id="compilerTabBtn" style="display:none;">Compiler Diagnostics</button>
+        </div>
+        <div class="output-controls">
+          <button id="btnClearOutput" class="tool-btn" title="Clear console">Clear</button>
+        </div>
+      </div>
+
+      <!-- Live Execution Banner -->
+      <div id="statusBanner" class="status-banner idle">
+        <div class="status-left">
+          <span id="statusIcon" class="status-icon">⚪</span>
+          <span id="statusText" class="status-text">Ready for execution</span>
+        </div>
+        <div class="status-right" id="metricsDisplay">
+          <span class="metric-chip" id="metricDuration" style="display:none;">Duration: <strong>0ms</strong></span>
+          <span class="metric-chip" id="metricExitCode" style="display:none;">Exit: <strong>0</strong></span>
+        </div>
+      </div>
+
+      <!-- Output Display Windows -->
+      <div class="terminal-body">
+        <pre id="outputStdout" class="terminal-view active">Welcome to Secure Online Code Execution Platform!
+Write or paste your code on the left, then click 'Run Code' or press Ctrl+Enter.
+Execution takes place in an isolated sandbox with strict resource and output constraints.</pre>
+        <pre id="outputStderr" class="terminal-view" style="display: none;"></pre>
+        <pre id="outputCompiler" class="terminal-view" style="display: none;"></pre>
+      </div>
+
+      <!-- Security Guard Details Footer -->
+      <div class="security-card">
+        <div class="sec-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <span>Sandbox Boundary Active</span>
+        </div>
+        <div class="sec-specs">
+          <span>Least Privilege Env</span> • 
+          <span>Zero Host Secrets</span> • 
+          <span>Process-Tree Kill Guaranteed</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal: System Health & Info -->
+  <div id="healthModal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>System Health & Sandbox Policies</h2>
+        <button id="btnCloseHealthModal" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="healthModalBody">
+        <p>Loading health information...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Submission History -->
+  <div id="historyModal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Execution History</h2>
+        <button id="btnCloseHistoryModal" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="historyModalBody">
+        <p>No jobs submitted in this session yet.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
