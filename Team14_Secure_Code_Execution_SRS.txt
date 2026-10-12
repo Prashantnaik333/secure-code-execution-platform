@@ -1,0 +1,381 @@
+Software Requirements Specification (SRS)
+Secure Online Code Execution Platform
+Team 14 | Version 1.0 | Date: 10 October 2026 | Status: Draft for Team Review
+Problem statement: Allow users to write and execute programs in an isolated environment. Enforce time/resource limits, capture output and errors, and protect the server from unsafe code.
+Team Members
+Name
+SRN
+Prathyush Gowda
+PES1UG24AM201
+Pradyum Bidadi
+PES1UG24AM194
+Prashant Devendra Naik
+PES1UG24AM199
+Pradyun P Urs
+PES1UG24AM195
+Revision History
+Version
+Date
+Author
+Change Summary
+1.0
+10-10-2026
+Team 14
+Initial project-specific draft
+Approvals
+Course instructor / evaluator: ____________________    Date: __________
+Team representative: ____________________________    Date: __________
+1. Introduction
+1.1 Purpose
+This SRS defines the functional, non-functional, interface, security, and acceptance requirements for a Secure Online Code Execution Platform. It is the baseline for implementation, testing, and evaluation.
+1.2 Scope
+The platform allows a user to submit source code in supported languages, execute it in an isolated runtime, enforce execution and resource limits, and view standard output, standard error, exit status, and execution metadata. The platform must prevent submitted programs from accessing host files, secrets, other users' jobs, or unrestricted network resources.
+1.3 Audience
+Student developers, testers, project evaluator, maintainers, and users of the platform.
+1.4 Definitions
+Sandbox: restricted execution environment; Job: one submitted program execution; stdout: standard output; stderr: standard error; CPU limit: maximum processor time; wall-clock timeout: maximum elapsed time; RBAC: role-based access control; CI: continuous integration.
+2. Overall Description
+2.1 Product Perspective
+A web-based application composed of a user interface, API/backend, job queue or job manager, isolated execution worker, and persistent metadata store. The execution worker is treated as an untrusted-code boundary and must not run submitted code with application/server privileges.
+2.2 Product Functions
+Write or paste code in an editor and select a supported programming language.
+Submit code with optional standard input and receive a job identifier.
+Compile code when required and execute it in a sandbox.
+Enforce wall-clock timeout, CPU/memory limits, and output-size limits.
+Capture stdout, stderr, compile errors, exit code, and execution duration.
+Show job states: queued, running, completed, failed, timed out, or rejected.
+Reject unsupported languages, malformed requests, and oversized submissions.
+Isolate jobs from one another and restrict filesystem and network access.
+Provide basic health/status information and operational logs without storing secrets or unnecessary source data.
+Run automated tests in CI and require reviewed changes before merging to main.
+2.3 User Roles
+User: submits and views their own code execution jobs.
+Maintainer/administrator: configures supported languages and limits, monitors service health, and reviews security logs.
+Developer/tester: develops features on separate branches and validates changes with automated tests.
+2.4 Operating Environment
+Modern desktop/mobile browser; backend service on a Linux-capable host; isolated worker runtime using OS-level sandboxing such as containers with restrictive security settings. Exact deployment platform and supported languages must be confirmed by the team.
+2.5 Constraints and Assumptions
+Submitted code is untrusted and must never execute directly inside the privileged web/API process.
+Execution requires strict default-deny resource and permission settings.
+A finite list of languages and compiler/runtime versions will be maintained.
+The initial project may use a local or educational deployment; production-grade multi-tenant security requires additional review.
+The service must fail safely if the worker is unavailable or a job exceeds limits.
+3. External Interface Requirements
+3.1 User Interface
+Code editor, language selector, optional stdin field, Run button, and clear validation messages.
+Execution result panel displaying stdout, stderr, compile errors, status, exit code, and duration.
+Show timeout/resource-limit failures in a readable form without exposing internal paths or secrets.
+3.2 Software Interfaces
+Frontend-to-backend HTTPS/HTTP API according to deployment environment.
+Backend-to-worker interface that passes a job payload and receives bounded result metadata.
+Persistent store for job metadata where implemented; do not store secrets or full output indefinitely by default.
+3.3 API Interface (proposed)
+Endpoint
+Method
+Purpose
+Expected response
+/api/execute
+POST
+Submit source code, language, and optional stdin
+jobId and accepted status, or validation error
+/api/jobs/{jobId}
+GET
+Retrieve job state and result for an authorized owner
+status, stdout, stderr, exitCode, durationMs
+/api/health
+GET
+Check application/worker readiness
+health status without sensitive details
+3.4 Input and Output Limits
+The implementation must define configurable maximum source size, stdin size, output size, memory, CPU time, and wall-clock duration. Initial numeric values must be documented in configuration and tests before acceptance; do not treat unspecified values as unlimited.
+4. System Features and Functional Requirements
+Req ID
+Requirement
+Priority
+Acceptance criteria
+Test ref
+SCEP-F-001
+The system shall accept source code, a supported language identifier, and optional standard input.
+High
+Valid request returns a job identifier.
+TC-F-01
+SCEP-F-002
+The system shall reject missing code, invalid language identifiers, and malformed requests.
+High
+Invalid requests return a clear 4xx response and do not start execution.
+TC-F-02
+SCEP-F-003
+The system shall compile submitted code for compiled languages before execution.
+High
+Compilation result and diagnostics are captured; failed compilation is not executed.
+TC-F-03
+SCEP-F-004
+The system shall execute each accepted job inside an isolated sandbox.
+Critical
+Worker runs with restricted privileges and no access to host secrets or unrelated jobs.
+TC-SEC-01
+SCEP-F-005
+The system shall enforce a configurable wall-clock timeout.
+Critical
+A job exceeding the timeout is terminated and marked timed_out.
+TC-LIM-01
+SCEP-F-006
+The system shall enforce configurable CPU and memory limits.
+Critical
+A resource-exhausting job is stopped or contained without destabilizing the service.
+TC-LIM-02
+SCEP-F-007
+The system shall capture standard output and standard error separately.
+High
+Output fields match the program's stdout and stderr streams.
+TC-F-04
+SCEP-F-008
+The system shall capture exit code and execution duration where available.
+Medium
+Result metadata is present for completed or failed executions.
+TC-F-05
+SCEP-F-009
+The system shall cap output size and terminate or truncate output according to documented policy.
+High
+Output flooding cannot consume unbounded storage or memory.
+TC-LIM-03
+SCEP-F-010
+The system shall expose job states queued, running, completed, failed, timed_out, and rejected as applicable.
+High
+State transitions are consistent and understandable.
+TC-F-06
+SCEP-F-011
+The system shall allow a user to retrieve results only for jobs they are authorized to access.
+Critical
+Unauthorized job lookups are denied without leaking result data.
+TC-SEC-02
+SCEP-F-012
+The system shall validate and normalize all API inputs before scheduling execution.
+High
+Invalid or oversized input is rejected before reaching the worker.
+TC-SEC-03
+SCEP-F-013
+The system shall prevent submitted code from accessing the host filesystem beyond explicitly mounted temporary workspace.
+Critical
+Sandbox test cannot read protected host files or modify host files.
+TC-SEC-04
+SCEP-F-014
+The system shall disable outbound network access for submitted code by default unless explicitly approved by project policy.
+High
+Sandboxed test cannot establish an unauthorized outbound connection.
+TC-SEC-05
+SCEP-F-015
+The system shall clean temporary files and terminate child processes after each job.
+High
+No job process or workspace remains after cleanup completes.
+TC-SEC-06
+SCEP-F-016
+The system shall record operational events such as job accepted, completed, timed out, and failed without logging secrets.
+Medium
+Logs contain timestamp, job reference, status, and safe diagnostic details.
+TC-OPS-01
+SCEP-F-017
+The system shall provide a health endpoint for application and worker readiness.
+Medium
+Health status correctly reports unavailable worker/service dependencies.
+TC-OPS-02
+SCEP-F-018
+The system shall return structured error responses for validation, compilation, execution, timeout, and internal failures.
+High
+Clients can distinguish failure categories without receiving stack traces or secrets.
+TC-F-07
+5. Non-Functional Requirements
+Req ID
+Requirement
+Category
+Verification
+SCEP-NF-001
+For a small configured test program under normal local test load, API submission acknowledgement should be returned within 2 seconds at the 95th percentile, excluding queue wait and program runtime.
+Performance
+TC-NF-01
+SCEP-NF-002
+Every execution shall have finite, configurable wall-clock, CPU, memory, and output limits.
+Safety / resource control
+TC-LIM-01 to 03
+SCEP-NF-003
+A failed or malicious job shall not crash the API service or affect another job's result.
+Reliability / isolation
+TC-SEC-01, TC-SEC-06
+SCEP-NF-004
+The interface shall display execution state and errors in clear, actionable language.
+Usability
+TC-UX-01
+SCEP-NF-005
+The codebase shall have automated tests run by CI on pull requests and main-branch updates.
+Maintainability / process
+TC-CI-01
+SCEP-NF-006
+Secrets, environment variables, host paths, and internal stack traces shall not be returned to users or written to routine logs.
+Security / privacy
+TC-SEC-07
+SCEP-NF-007
+The service shall return a controlled error when the worker is unavailable, rather than accepting work that cannot be safely executed.
+Availability / fault handling
+TC-OPS-02
+5.1 Security Objectives
+Confidentiality: users cannot read other users' code/results or access host secrets through submitted programs.
+Integrity and availability: submitted programs cannot modify host/application data or consume unbounded resources to disrupt the service.
+5.2 Security Requirements
+ID
+Requirement
+Priority
+Acceptance / test
+SCEP-SR-001
+The execution worker shall run submitted code with least privilege and without privileged host access.
+Critical
+Sandbox escape and privilege tests fail safely; TC-SEC-01
+SCEP-SR-002
+The worker shall enforce CPU, memory, wall-clock, process-count where supported, and output limits.
+Critical
+Resource exhaustion is contained; TC-LIM-01..03
+SCEP-SR-003
+The API shall authorize job-result retrieval and prevent insecure direct object references.
+Critical
+Cross-user job access is denied; TC-SEC-02
+SCEP-SR-004
+The sandbox shall restrict filesystem access to a temporary per-job workspace and required runtime files.
+Critical
+Protected host files are inaccessible; TC-SEC-04
+SCEP-SR-005
+Outbound network access shall be disabled by default for untrusted programs.
+High
+Network access test is blocked; TC-SEC-05
+SCEP-SR-006
+Logs and API responses shall not disclose credentials, environment secrets, or internal stack traces.
+High
+Secret/stack-trace inspection passes; TC-SEC-07
+6. Quality Attributes and Acceptance Tests
+All critical and high-priority requirements must have corresponding tests.
+All critical security tests must pass before demonstration or release.
+No open critical defect may remain at acceptance.
+CI must pass and the pull request must receive at least one teammate approval before merge.
+Numeric resource defaults and supported language versions must be recorded in configuration and test documentation.
+7. UML Use-Case Diagram
+Actors: User, Administrator/Maintainer. Main use cases: Submit Code, Select Language, Provide Input, Execute in Sandbox, View Output/Error, Check Job Status, Configure Limits, View Health/Operational Logs.
+PlantUML source (render with PlantUML to produce the required diagram):
+@startumlleft to right directionactor Useractor "Administrator / Maintainer" as Adminrectangle "Secure Online Code Execution Platform" {  usecase "Submit Source Code" as UC1  usecase "Select Language / Input" as UC2  usecase "Execute in Isolated Sandbox" as UC3  usecase "View Output and Errors" as UC4  usecase "Check Job Status" as UC5  usecase "Configure Execution Limits" as UC6  usecase "Check Service Health" as UC7}User --> UC1User --> UC2User --> UC3User --> UC4User --> UC5Admin --> UC6Admin --> UC7UC1 .> UC3 : <<include>>UC3 .> UC4 : <<include>>@enduml
+8. Requirements Traceability Matrix (RTM)
+Req ID
+Short requirement
+Section
+Module
+Test case
+Status
+SCEP-F-001
+The system shall accept source code, a supported language identifier, and optional standard input.
+SRS §4/§5
+Execution/API/Sandbox
+TC-F-01
+Not run
+SCEP-F-002
+The system shall reject missing code, invalid language identifiers, and malformed requests.
+SRS §4/§5
+Execution/API/Sandbox
+TC-F-02
+Not run
+SCEP-F-003
+The system shall compile submitted code for compiled languages before execution.
+SRS §4/§5
+Execution/API/Sandbox
+TC-F-03
+Not run
+SCEP-F-004
+The system shall execute each accepted job inside an isolated sandbox.
+SRS §4/§5
+Execution/API/Sandbox
+TC-SEC-01
+Not run
+SCEP-F-005
+The system shall enforce a configurable wall-clock timeout.
+SRS §4/§5
+Execution/API/Sandbox
+TC-LIM-01
+Not run
+SCEP-F-006
+The system shall enforce configurable CPU and memory limits.
+SRS §4/§5
+Execution/API/Sandbox
+TC-LIM-02
+Not run
+SCEP-F-007
+The system shall capture standard output and standard error separately.
+SRS §4/§5
+Execution/API/Sandbox
+TC-F-04
+Not run
+SCEP-F-008
+The system shall capture exit code and execution duration where available.
+SRS §4/§5
+Execution/API/Sandbox
+TC-F-05
+Not run
+SCEP-F-009
+The system shall cap output size and terminate or truncate output according to documented policy.
+SRS §4/§5
+Execution/API/Sandbox
+TC-LIM-03
+Not run
+SCEP-F-010
+The system shall expose job states queued, running, completed, failed, timed_out, and rejected as applicable.
+SRS §4/§5
+Execution/API/Sandbox
+TC-F-06
+Not run
+SCEP-F-011
+The system shall allow a user to retrieve results only for jobs they are authorized to access.
+SRS §4/§5
+Execution/API/Sandbox
+TC-SEC-02
+Not run
+SCEP-F-012
+The system shall validate and normalize all API inputs before scheduling execution.
+SRS §4/§5
+Execution/API/Sandbox
+TC-SEC-03
+Not run
+SCEP-F-013
+The system shall prevent submitted code from accessing the host filesystem beyond explicitly mounted temporary workspace.
+SRS §4/§5
+Execution/API/Sandbox
+TC-SEC-04
+Not run
+SCEP-F-014
+The system shall disable outbound network access for submitted code by default unless explicitly approved by project policy.
+SRS §4/§5
+Execution/API/Sandbox
+TC-SEC-05
+Not run
+SCEP-F-015
+The system shall clean temporary files and terminate child processes after each job.
+SRS §4/§5
+Execution/API/Sandbox
+TC-SEC-06
+Not run
+SCEP-F-016
+The system shall record operational events such as job accepted, completed, timed out, and failed without logging secrets.
+SRS §4/§5
+Execution/API/Sandbox
+TC-OPS-01
+Not run
+SCEP-F-017
+The system shall provide a health endpoint for application and worker readiness.
+SRS §4/§5
+Execution/API/Sandbox
+TC-OPS-02
+Not run
+SCEP-F-018
+The system shall return structured error responses for validation, compilation, execution, timeout, and internal failures.
+SRS §4/§5
+Execution/API/Sandbox
+TC-F-07
+Not run
+Appendix A. Open Decisions
+Confirm exact supported languages and compiler/runtime versions.
+Choose implementation stack and sandbox technology based on lab constraints.
+Set numerical defaults for source/stdin/output sizes, timeout, CPU, memory, and process limits.
+Decide whether user accounts and persistent job history are in project scope.
