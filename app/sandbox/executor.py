@@ -193,15 +193,39 @@ def execute_in_sandbox(
 
         # Step 3: Launch Process
         run_start = time.time()
-        proc = subprocess.Popen(
-            cmd,
-            cwd=str(workspace),
-            env=clean_env,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=False,
-        )
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                cwd=str(workspace),
+                env=clean_env,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=False,
+            )
+        except OSError as e:
+            if getattr(e, "winerror", None) == 4551 or "blocked" in str(e).lower():
+                time.sleep(0.3)
+                try:
+                    proc = subprocess.Popen(
+                        cmd,
+                        cwd=str(workspace),
+                        env=clean_env,
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=False,
+                    )
+                except Exception as retry_err:
+                    result["status"] = "failed"
+                    result["errorCategory"] = "runtime"
+                    result["stderr"] = f"Execution blocked by system policy: {retry_err}"
+                    return result
+            else:
+                result["status"] = "failed"
+                result["errorCategory"] = "runtime"
+                result["stderr"] = f"Process launch failed: {e}"
+                return result
 
         # Write stdin if provided
         if stdin_data and proc.stdin:

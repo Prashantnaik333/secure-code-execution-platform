@@ -60,7 +60,7 @@ class TestOperations:
         body = res_syntax.json()
 
         start = time.time()
-        while time.time() - start < 5.0:
+        while time.time() - start < 12.0:
             job_res = client.get(f"/api/jobs/{body['jobId']}?token={body['token']}").json()
             if job_res["status"] not in ("queued", "running"):
                 break

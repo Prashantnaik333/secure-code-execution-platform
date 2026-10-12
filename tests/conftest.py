@@ -2,6 +2,12 @@
 Pytest configuration and fixtures for testing Secure Online Code Execution Platform.
 """
 
+import sys
+from pathlib import Path
+
+# Add project root to Python path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
