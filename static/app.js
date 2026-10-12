@@ -21,7 +21,7 @@ const LANGUAGE_CONFIGS = {
     output_flood: `# [TC-LIM-03] Output Flood Test (Capped at 64KB)\nprint("Flooding stdout...")\nfor i in range(10000):\n    print(f"Flood line {i}: " + "X" * 50)\n`,
     compile_err: `# Syntax Error\ndef broken_func(\n    print("Missing closing paren")\n`,
     secret_probe: `# [TC-SEC-01] Host Secret & Environment Snooper Probe\nimport os\nprint("Checking environment variables in sandbox...")\nfor k, v in sorted(os.environ.items()):\n    print(f"{k} = {v}")\nprint("\\nNotice: Host credentials, AWS keys, and private tokens are stripped!")\n`,
-    fs_probe: `# [TC-SEC-04] Filesystem Isolation Probe\nimport os\nprint("Current working directory:", os.getcwd())\ntry:\n    with open("../../Team14_Secure_Code_Execution_SRS.docx", "rb") as f:\n        print("WARNING: Leaked outside sandbox!")\nexcept Exception as e:\n    print(f"PASS: Host file access safely blocked: {e}")\n`,
+    fs_probe: `# [TC-SEC-04] Filesystem Isolation Probe\nimport os\nprint("Current working directory:", os.getcwd())\ntry:\n    with open("../../README.md", "rb") as f:\n        print("WARNING: Leaked outside sandbox!")\nexcept Exception as e:\n    print(f"PASS: Host file access safely blocked: {e}")\n`,
   },
   javascript: {
     fileName: "main.js",
@@ -32,7 +32,7 @@ const LANGUAGE_CONFIGS = {
     output_flood: `// [TC-LIM-03] Output Flood\nfor (let i = 0; i < 5000; i++) {\n    console.log("Flood chunk " + i + ": " + "Y".repeat(60));\n}\n`,
     compile_err: `// Syntax Error\nfunction broken( {\n    console.log("Unclosed");\n`,
     secret_probe: `// Inspect Process Environment\nconsole.log("Process ENV keys:", Object.keys(process.env).sort());\n`,
-    fs_probe: `// Host filesystem probe\nconst fs = require('fs');\ntry {\n    fs.readFileSync('../../Team14_Secure_Code_Execution_SRS.docx');\n    console.log("FAIL: Leaked host file");\n} catch (e) {\n    console.log("PASS: Blocked or prevented host access:", e.message);\n}\n`,
+    fs_probe: `// Host filesystem probe\nconst fs = require('fs');\ntry {\n    fs.readFileSync('../../README.md');\n    console.log("FAIL: Leaked host file");\n} catch (e) {\n    console.log("PASS: Blocked or prevented host access:", e.message);\n}\n`,
   },
   c: {
     fileName: "main.c",
@@ -43,7 +43,7 @@ const LANGUAGE_CONFIGS = {
     output_flood: `// [TC-LIM-03] Output Flood\n#include <stdio.h>\n\nint main() {\n    for (int i = 0; i < 5000; i++) {\n        printf("Flood line %d: ABCDEFGHIJKLMNOPQRSTUVWXYZ\\n", i);\n    }\n    return 0;\n}\n`,
     compile_err: `// [TC-F-03] Compilation Syntax Error\n#include <stdio.h>\n\nint main() {\n    printf("Missing semicolon")\n    return 0\n}\n`,
     secret_probe: `// C Environment Probe\n#include <stdio.h>\n#include <stdlib.h>\n\nint main() {\n    printf("Sandbox temp: %s\\n", getenv("TEMP"));\n    return 0;\n}\n`,
-    fs_probe: `// C Filesystem Probe\n#include <stdio.h>\n\nint main() {\n    FILE *f = fopen("../../Team14_Secure_Code_Execution_SRS.docx", "r");\n    if (f) {\n        printf("FAIL: Host file opened!\\n");\n        fclose(f);\n    } else {\n        printf("PASS: Host file not accessible.\\n");\n    }\n    return 0;\n}\n`,
+    fs_probe: `// C Filesystem Probe\n#include <stdio.h>\n\nint main() {\n    FILE *f = fopen("../../README.md", "r");\n    if (f) {\n        printf("FAIL: Host file opened!\\n");\n        fclose(f);\n    } else {\n        printf("PASS: Host file not accessible.\\n");\n    }\n    return 0;\n}\n`,
   },
   cpp: {
     fileName: "main.cpp",
@@ -54,7 +54,7 @@ const LANGUAGE_CONFIGS = {
     output_flood: `// [TC-LIM-03] Output Flood\n#include <iostream>\n\nint main() {\n    for (int i = 0; i < 5000; ++i) {\n        std::cout << "Flood line " << i << ": 12345678901234567890\\n";\n    }\n    return 0;\n}\n`,
     compile_err: `// [TC-F-03] Compilation Syntax Error\n#include <iostream>\n\nint main() {\n    std::cout << "Missing semicolon" << std::endl\n    return 0;\n}\n`,
     secret_probe: `// C++ Environment Probe\n#include <iostream>\n#include <cstdlib>\n\nint main() {\n    std::cout << "TEMP: " << (std::getenv("TEMP") ? std::getenv("TEMP") : "None") << std::endl;\n    return 0;\n}\n`,
-    fs_probe: `// C++ Filesystem Probe\n#include <iostream>\n#include <fstream>\n\nint main() {\n    std::ifstream file("../../Team14_Secure_Code_Execution_SRS.docx");\n    if (file.is_open()) {\n        std::cout << "FAIL: Opened host file!" << std::endl;\n    } else {\n        std::cout << "PASS: Host file blocked." << std::endl;\n    }\n    return 0;\n}\n`,
+    fs_probe: `// C++ Filesystem Probe\n#include <iostream>\n#include <fstream>\n\nint main() {\n    std::ifstream file("../../README.md");\n    if (file.is_open()) {\n        std::cout << "FAIL: Opened host file!" << std::endl;\n    } else {\n        std::cout << "PASS: Host file blocked." << std::endl;\n    }\n    return 0;\n}\n`,
   },
   java: {
     fileName: "Main.java",
@@ -65,7 +65,7 @@ const LANGUAGE_CONFIGS = {
     output_flood: `// [TC-LIM-03] Output Flood\npublic class Main {\n    public static void main(String[] args) {\n        for (int i = 0; i < 5000; i++) {\n            System.out.println("Java flood line " + i + ": ##################");\n        }\n    }\n}\n`,
     compile_err: `// [TC-F-03] Compilation Syntax Error\npublic class Main {\n    public static void main(String[] args) {\n        System.out.println("Broken syntax")\n    }\n}\n`,
     secret_probe: `// Java Environment Probe\npublic class Main {\n    public static void main(String[] args) {\n        System.out.println("Java Temp Dir: " + System.getProperty("java.io.tmpdir"));\n    }\n}\n`,
-    fs_probe: `// Java Filesystem Probe\nimport java.io.File;\n\npublic class Main {\n    public static void main(String[] args) {\n        File f = new File("../../Team14_Secure_Code_Execution_SRS.docx");\n        if (f.exists() && f.canRead()) {\n            System.out.println("FAIL: Host file accessible!");\n        } else {\n            System.out.println("PASS: Host file blocked or not found.");\n        }\n    }\n}\n`,
+    fs_probe: `// Java Filesystem Probe\nimport java.io.File;\n\npublic class Main {\n    public static void main(String[] args) {\n        File f = new File("../../README.md");\n        if (f.exists() && f.canRead()) {\n            System.out.println("FAIL: Host file accessible!");\n        } else {\n            System.out.println("PASS: Host file blocked or not found.");\n        }\n    }\n}\n`,
   },
 };
 

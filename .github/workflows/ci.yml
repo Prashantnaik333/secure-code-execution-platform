@@ -43,4 +43,5 @@ jobs:
 
       - name: Run Pytest Test Suite (Full STP Coverage)
         run: |
-          pytest -v --tb=short
+          export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+          python -m pytest -v --tb=short

@@ -77,7 +77,7 @@ class TestSecurity:
         probe_code = (
             "import os\n"
             "try:\n"
-            "    with open('../../Team14_Secure_Code_Execution_SRS.docx', 'rb') as f:\n"
+            "    with open('../../README.md', 'rb') as f:\n"
             "        print('HOST_FILE_ACCESSIBLE')\n"
             "except Exception as e:\n"
             "    print(f'PASS_BLOCKED_{type(e).__name__}')\n"
